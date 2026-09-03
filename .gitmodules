@@ -1,0 +1,3 @@
+[submodule "submodules/BRTLibrary"]
+	path = submodules/BRTLibrary
+	url = https://github.com/hytheaway/BRTLibrary.git
