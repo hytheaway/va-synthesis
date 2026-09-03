@@ -1,3 +1,6 @@
 [submodule "submodules/BRTLibrary"]
 	path = submodules/BRTLibrary
 	url = https://github.com/hytheaway/BRTLibrary.git
+[submodule "submodules/pffdtd"]
+	path = submodules/pffdtd
+	url = https://github.com/hytheaway/pffdtd.git

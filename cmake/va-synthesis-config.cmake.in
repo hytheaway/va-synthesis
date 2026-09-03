@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/va-synthesis-targets.cmake")
+
+set_and_check(VA_SYNTHESIS_PFFDTD_TOOLS_DIR
+    "@PACKAGE_CMAKE_INSTALL_DATADIR@/va-synthesis/tools")
+set_and_check(VA_SYNTHESIS_PFFDTD_BRIDGE_SCRIPT
+    "${VA_SYNTHESIS_PFFDTD_TOOLS_DIR}/pffdtd_bridge.py")
