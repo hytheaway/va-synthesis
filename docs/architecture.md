@@ -42,13 +42,14 @@ submodules/pffdtd/         pinned PFFDTD fork; do not modify for VA features
 ## Geometrical path
 
 `BRTGeometricalSolver` prevents BRT-specific graph and audio-buffer types from
-becoming engine-wide types. With BRT enabled, coordinates are translated to
-BRT vectors inside the backend; the free-field route is usable as a reference
-and tests the shared contract. The next integration step is to add private adapter
-implementations for BRT's `ISMEnvironmentModel` and `SDNEnvironmentModel`,
-mapping the neutral scene into BRT rooms, sources, and listeners. Ray tracing
-should be another strategy behind the same class or a sibling solver if its
-configuration diverges substantially.
+becoming engine-wide types. Its selectable strategies are free field,
+BRTLibrary's recursive image-source model, BRTLibrary's scattering delay
+network, and a VA-owned stochastic specular ray tracer. The image-source
+adapter maps triangle geometry into BRT rooms and uses BRT visibility and
+nine-band reflection gains. The SDN uses the scene bounds as a shoebox and
+generates a dense reverberant response. The ray tracer handles triangle meshes
+directly and uses a spherical receiver with deterministic ray directions. See
+`geometrical.md` for constraints and controls.
 
 BRTLibrary is GPL-3.0-or-later. Before distributing a linked product, choose
 project licensing and deployment boundaries that are compatible with BRT's
@@ -91,10 +92,9 @@ That avoids forcing FDTD's grid model onto unstructured-mesh methods.
 
 ## Remaining increments
 
-1. Implement BRT ISM end-to-end and compare its impulse response with an
-   analytic shoebox-room case.
-2. Add an end-to-end PFFDTD fixture once the PFFDTD Conda environment is
-   provisioned in CI; the current tests validate the shared Cartesian update.
+1. Validate BRT ISM arrival times against an analytic shoebox-room suite and
+   add frequency-dependent path filtering to the current broadband RIR taps.
+2. Provision the existing opt-in PFFDTD end-to-end fixture in CI.
 3. Replace the reference solver's pedagogical boundary with a validated ABC.
 4. Add partitioned FFT convolution for bounded-memory streaming; the current
    whole-buffer FFT path is intended for offline rendering.

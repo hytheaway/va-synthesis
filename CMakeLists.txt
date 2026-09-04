@@ -51,12 +51,25 @@ else()
 endif()
 
 set(VA_BRT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submodules/BRTLibrary/include")
+set(VA_BRT_EIGEN_INCLUDE_DIR
+    "${VA_BRT_INCLUDE_DIR}/third_party_libraries/eigen")
+set(VA_BRT_BOOST_INCLUDE_DIR
+    "${VA_BRT_INCLUDE_DIR}/third_party_libraries/boost_circular_buffer")
 if(VA_ENABLE_BRT)
     if(NOT EXISTS "${VA_BRT_INCLUDE_DIR}/BRTLibrary.h")
         message(FATAL_ERROR
             "BRTLibrary is not initialized. Run: git submodule update --init --recursive")
     endif()
-    target_include_directories(va_synthesis SYSTEM PRIVATE "${VA_BRT_INCLUDE_DIR}")
+    if(NOT EXISTS "${VA_BRT_EIGEN_INCLUDE_DIR}/Eigen/Core")
+        message(FATAL_ERROR
+            "BRTLibrary nested dependencies are not initialized. Run: "
+            "git submodule update --init --recursive")
+    endif()
+    target_include_directories(va_synthesis SYSTEM PRIVATE
+        "${VA_BRT_INCLUDE_DIR}"
+        "${VA_BRT_EIGEN_INCLUDE_DIR}"
+        "${VA_BRT_BOOST_INCLUDE_DIR}"
+    )
     target_compile_definitions(va_synthesis PUBLIC VA_HAS_BRT=1)
 else()
     target_compile_definitions(va_synthesis PUBLIC VA_HAS_BRT=0)

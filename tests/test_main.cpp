@@ -6,11 +6,13 @@
 #include "va/wave/pffdtd_backend.hpp"
 #include "va/wave/pffdtd_scene.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 
 namespace {
@@ -29,15 +31,109 @@ va::Scene test_scene() {
     return scene;
 }
 
+va::Scene shoebox_scene() {
+    va::Scene scene;
+    scene.bounds = {{0.0, 0.0, 0.0}, {4.0, 3.0, 2.5}};
+    scene.sources.push_back({{1.0, 1.5, 1.25}, 1.0});
+    scene.receivers.push_back({{3.0, 1.5, 1.25}});
+    va::AcousticMaterial wall;
+    wall.id = "wall";
+    wall.octave_absorption.fill(0.2);
+    scene.materials.push_back(wall);
+    const auto add = [&scene](va::Vec3 a, va::Vec3 b, va::Vec3 c) {
+        scene.geometry.push_back({{{a, b, c}}, "wall", 1});
+    };
+    add({0, 0, 0}, {0, 3, 0}, {4, 3, 0});
+    add({0, 0, 0}, {4, 3, 0}, {4, 0, 0});
+    add({0, 0, 2.5}, {4, 3, 2.5}, {0, 3, 2.5});
+    add({0, 0, 2.5}, {4, 0, 2.5}, {4, 3, 2.5});
+    add({0, 0, 0}, {4, 0, 2.5}, {0, 0, 2.5});
+    add({0, 0, 0}, {4, 0, 0}, {4, 0, 2.5});
+    add({0, 3, 0}, {0, 3, 2.5}, {4, 3, 2.5});
+    add({0, 3, 0}, {4, 3, 2.5}, {4, 3, 0});
+    add({0, 0, 0}, {0, 0, 2.5}, {0, 3, 2.5});
+    add({0, 0, 0}, {0, 3, 2.5}, {0, 3, 0});
+    add({4, 0, 0}, {4, 3, 2.5}, {4, 0, 2.5});
+    add({4, 0, 0}, {4, 3, 0}, {4, 3, 2.5});
+    return scene;
+}
+
+std::size_t count_nonzero(const va::AudioBuffer& buffer, float threshold = 1.0e-8F) {
+    return static_cast<std::size_t>(std::count_if(buffer.begin(), buffer.end(),
+        [threshold](float sample) { return std::abs(sample) > threshold; }));
+}
+
 void test_geometrical_delay() {
     auto scene = test_scene();
     va::ImpulseResponseSettings settings{48'000.0, 0.01};
     va::Engine engine(std::make_unique<va::geometrical::BRTGeometricalSolver>());
     const auto result = engine.compute_impulse_responses(scene, settings);
     const auto expected = static_cast<std::size_t>(
-        std::llround(settings.impulse_response_sample_rate / scene.speed_of_sound));
+        std::floor(settings.impulse_response_sample_rate / scene.speed_of_sound));
     require(result.receiver_count == 1, "geometrical receiver count");
-    require(result.response(0, 0)[expected] == 1.0F, "geometrical delay or gain");
+    require(std::abs(result.response(0, 0)[expected] +
+                     result.response(0, 0)[expected + 1] - 1.0F) < 1.0e-6F,
+            "geometrical delay or gain");
+}
+
+#if VA_HAS_BRT
+void test_brt_image_sources_and_reverb_switch() {
+    auto scene = shoebox_scene();
+    va::geometrical::BRTSettings configuration;
+    configuration.method = va::geometrical::Method::image_source;
+    configuration.reflection_order = 1;
+    va::geometrical::BRTGeometricalSolver solver(configuration);
+    const auto reverberant = solver.compute_impulse_responses(scene, {48'000.0, 0.08});
+    require(count_nonzero(reverberant.response(0, 0)) > 2,
+            "BRT image-source model produced no reflections");
+
+    configuration.enable_reverberation = false;
+    va::geometrical::BRTGeometricalSolver direct_only(configuration);
+    const auto direct = direct_only.compute_impulse_responses(scene, {48'000.0, 0.08});
+    require(count_nonzero(direct.response(0, 0)) <= 2,
+            "image-source reverberation switch did not remove reflections");
+
+    const auto low_absorption_energy = std::accumulate(
+        reverberant.response(0, 0).begin(), reverberant.response(0, 0).end(), 0.0,
+        [](double sum, float sample) { return sum + std::abs(sample); });
+    scene.materials.front().octave_absorption.fill(0.8);
+    configuration.enable_reverberation = true;
+    va::geometrical::BRTGeometricalSolver absorptive_solver(configuration);
+    const auto absorptive = absorptive_solver.compute_impulse_responses(
+        scene, {48'000.0, 0.08});
+    const auto high_absorption_energy = std::accumulate(
+        absorptive.response(0, 0).begin(), absorptive.response(0, 0).end(), 0.0,
+        [](double sum, float sample) { return sum + std::abs(sample); });
+    require(high_absorption_energy < low_absorption_energy,
+            "BRT image-source reflections do not respond to material absorption");
+}
+
+void test_brt_sdn_reverberation() {
+    const auto scene = shoebox_scene();
+    va::geometrical::BRTSettings configuration;
+    configuration.method = va::geometrical::Method::scattering_delay_network;
+    va::geometrical::BRTGeometricalSolver solver(configuration);
+    const auto result = solver.compute_impulse_responses(scene, {48'000.0, 0.08});
+    require(count_nonzero(result.response(0, 0)) > 2,
+            "BRT SDN produced no reverberant response");
+}
+#endif
+
+void test_geometrical_ray_tracing() {
+    const auto scene = shoebox_scene();
+    va::geometrical::BRTSettings configuration;
+    configuration.method = va::geometrical::Method::ray_tracing;
+    configuration.reflection_order = 2;
+    configuration.ray_count = 16'384;
+    configuration.receiver_radius = 0.3;
+    va::geometrical::BRTGeometricalSolver solver(configuration);
+    const auto result = solver.compute_impulse_responses(scene, {48'000.0, 0.08});
+    require(count_nonzero(result.response(0, 0)) > 2,
+            "geometrical ray tracer produced no reflections");
+    va::geometrical::BRTGeometricalSolver repeated_solver(configuration);
+    const auto repeated = repeated_solver.compute_impulse_responses(scene, {48'000.0, 0.08});
+    require(result.response(0, 0) == repeated.response(0, 0),
+            "geometrical ray tracer is not deterministic for a fixed seed");
 }
 
 void test_fdtd_impulse_propagates() {
@@ -207,6 +303,11 @@ void test_fdtd_rejects_position_outside_z_domain() {
 int main() {
     try {
         test_geometrical_delay();
+#if VA_HAS_BRT
+        test_brt_image_sources_and_reverb_switch();
+        test_brt_sdn_reverberation();
+#endif
+        test_geometrical_ray_tracing();
         test_fdtd_impulse_propagates();
         test_fdtd_derives_stable_grid();
         test_fdtd_matches_cartesian_reference_update();
