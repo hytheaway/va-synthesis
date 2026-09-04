@@ -17,6 +17,44 @@ The FDTD solver is not a production room simulator: it uses a uniform 3D Cartesi
 
 ## Build and run
 
+First, make sure PFFDTD has everything it needs by creating a virtual Python environment and installing the relevant packages. Conda with miniforge3 is recommended.
+
+```sh
+cd submodules/pffdtd
+conda create -n va-pffdtd -c conda-forge \
+    python=3.11.15 \
+    numpy=1.26.4 \
+    h5py \
+    scipy \
+    numba \
+    resampy \
+    tqdm \
+    psutil \
+    memory_profiler \
+    matplotlib \
+    pytest
+conda activate va-pffdtd
+```
+
+Validate the environment from the repository root:
+
+```sh
+python -m pip check
+python -c "import numpy, h5py, scipy, numba, resampy, tqdm, psutil, memory_profiler, matplotlib"
+
+python tools/prepare_pffdtd_job.py --help
+python tools/pffdtd_bridge.py --help
+```
+
+If the CLI help menu appears for each of these files, the packages have been installed successfully. Then, check imports across the PFFDTD integration:
+
+```sh
+PYTHONPATH="$PWD/submodules/pffdtd/python" \
+python -c "from sim_setup import sim_setup; from fdtd.sim_fdtd import SimEngine; from fdtd.process_outputs import ProcessOutputs; print('PFFDTD imports passed')"
+```
+
+After this has succeeded, you build properly:
+
 ```sh
 cmake -S . -B build
 cmake --build build
