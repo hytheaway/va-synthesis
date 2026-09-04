@@ -13,7 +13,7 @@ The core is C++20 and can later be wrapped for Python, JUCE, game engines, or ot
 - `hytheaway/pffdtd`-provided scene export, job preparation, HDF5 result extraction, PFFDTD post-processing, and external Python/native-CPU execution adapters.
 - A command-line example and dependency-free smoke tests.
 
-The FDTD solver is not a production room simulator: it uses a uniform 3D Cartesian grid and does not yet model interior obstacles or frequency-dependent impedance.
+_The FDTD solver is not a production room simulator: it uses a uniform 3D Cartesian grid and does not yet model interior obstacles or frequency-dependent impedance._
 
 ## Build and run
 
