@@ -7,8 +7,11 @@
   attenuation.
 - `image_source` maps `Scene::geometry` into a BRT room and uses BRTLibrary's
   recursive image-source generation, polygon visibility, and material-derived
-  reflection gains. BRT's algorithm assumes a convex room with consistently
-  oriented boundary faces.
+  reflection gains. Axis-aligned shoebox meshes are collapsed to six rectangular
+  walls so coplanar triangles do not emit duplicate images. BRT's algorithm
+  assumes a convex room with consistently oriented boundary faces. Optimized
+  builds use a compatibility header that returns BRT wall normals by value;
+  upstream returns a reference to a local, which drops reflected arrivals.
 - `scattering_delay_network` runs BRTLibrary's six-wall SDN. It uses
   `Scene::bounds` as the shoebox, requires sources and receivers strictly
   inside those bounds, and requires an RIR sample rate above 32 kHz because its

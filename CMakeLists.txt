@@ -65,7 +65,22 @@ if(VA_ENABLE_BRT)
             "BRTLibrary nested dependencies are not initialized. Run: "
             "git submodule update --init --recursive")
     endif()
+    set(VA_BRT_COMPAT_DIR "${CMAKE_CURRENT_BINARY_DIR}/brt_compat")
+    find_program(VA_PYTHON3 NAMES python3 python REQUIRED)
+    execute_process(
+        COMMAND "${VA_PYTHON3}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_brt_wall.py"
+            "${VA_BRT_INCLUDE_DIR}/ServiceModules/Wall.hpp"
+            "${VA_BRT_COMPAT_DIR}/ServiceModules/Wall.hpp"
+        RESULT_VARIABLE VA_BRT_WALL_PATCH
+    )
+    if(NOT VA_BRT_WALL_PATCH EQUAL 0)
+        message(FATAL_ERROR "Failed to create the BRT Wall.hpp compatibility header")
+    endif()
+    # BRT's CWall::GetNormal returns a reference to a local.  Shadow the header
+    # so image-source visibility works in optimized builds without editing BRT.
     target_include_directories(va_synthesis SYSTEM PRIVATE
+        "${VA_BRT_COMPAT_DIR}"
         "${VA_BRT_INCLUDE_DIR}"
         "${VA_BRT_EIGEN_INCLUDE_DIR}"
         "${VA_BRT_BOOST_INCLUDE_DIR}"

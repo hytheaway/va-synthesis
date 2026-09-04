@@ -1,6 +1,7 @@
 #include "va/geometrical/brt_geometrical_solver.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 #include <numbers>
@@ -197,30 +198,107 @@ std::vector<float> brt_absorption(const Scene& scene, const std::string& materia
     return result;
 }
 
+int aabb_face(const Scene& scene, const Triangle& triangle) {
+    const auto on = [](double value, double bound) {
+        return std::abs(value - bound) <= 1.0e-6;
+    };
+    const auto& lo = scene.bounds.minimum;
+    const auto& hi = scene.bounds.maximum;
+    bool x_min = true, x_max = true, y_min = true, y_max = true, z_min = true, z_max = true;
+    for (const auto& vertex : triangle.vertices) {
+        x_min = x_min && on(vertex.x, lo.x);
+        x_max = x_max && on(vertex.x, hi.x);
+        y_min = y_min && on(vertex.y, lo.y);
+        y_max = y_max && on(vertex.y, hi.y);
+        z_min = z_min && on(vertex.z, lo.z);
+        z_max = z_max && on(vertex.z, hi.z);
+    }
+    if (x_min) return 0;
+    if (x_max) return 1;
+    if (y_min) return 2;
+    if (y_max) return 3;
+    if (z_min) return 4;
+    if (z_max) return 5;
+    return -1;
+}
+
 std::shared_ptr<BRTServices::CRoom> make_brt_room(const Scene& scene,
                                                    double fallback_absorption) {
     BRTServices::TRoomGeometry geometry;
-    const Vec3 center{(scene.bounds.minimum.x + scene.bounds.maximum.x) * 0.5,
-                      (scene.bounds.minimum.y + scene.bounds.maximum.y) * 0.5,
-                      (scene.bounds.minimum.z + scene.bounds.maximum.z) * 0.5};
-    for (const auto& triangle : scene.geometry) {
-        auto vertices = triangle.vertices;
-        const auto normal = cross(subtract(vertices[1], vertices[0]),
-                                  subtract(vertices[2], vertices[0]));
-        const auto centroid = multiply(add(add(vertices[0], vertices[1]), vertices[2]), 1.0 / 3.0);
-        if (dot(normal, subtract(center, centroid)) < 0.0) std::swap(vertices[1], vertices[2]);
+    std::vector<std::string> wall_materials;
+    const auto add_wall = [&](const std::array<Vec3, 4>& corners, const std::string& material_id) {
         const auto base = static_cast<int>(geometry.corners.size());
-        for (const auto& vertex : vertices) geometry.corners.push_back(to_brt(vertex));
-        // BRT's wall implementation initializes its plane when a fourth corner is inserted.
-        // Split one triangle edge so a triangle remains the same polygon but has four corners.
-        geometry.corners.push_back(to_brt(multiply(add(vertices[2], vertices[0]), 0.5)));
+        for (const auto& corner : corners) geometry.corners.push_back(to_brt(corner));
         geometry.walls.push_back({base, base + 1, base + 2, base + 3});
+        wall_materials.push_back(material_id);
+    };
+
+    std::array<int, 6> face_triangle;
+    face_triangle.fill(-1);
+    bool aabb_hull = !scene.geometry.empty();
+    for (std::size_t index = 0; index < scene.geometry.size(); ++index) {
+        const auto face = aabb_face(scene, scene.geometry[index]);
+        if (face < 0) {
+            aabb_hull = false;
+            break;
+        }
+        if (face_triangle[static_cast<std::size_t>(face)] < 0) {
+            face_triangle[static_cast<std::size_t>(face)] = static_cast<int>(index);
+        }
     }
+
+    if (aabb_hull) {
+        const auto& lo = scene.bounds.minimum;
+        const auto& hi = scene.bounds.maximum;
+        const auto material_of = [&](int face) {
+            return scene.geometry[static_cast<std::size_t>(face_triangle[static_cast<std::size_t>(face)])].material_id;
+        };
+        // Corner order matches BRT's SetupShoeBox so wall normals point inward.
+        if (face_triangle[1] >= 0) {
+            add_wall({{{hi.x, hi.y, hi.z}, {hi.x, hi.y, lo.z}, {hi.x, lo.y, lo.z}, {hi.x, lo.y, hi.z}}},
+                     material_of(1));
+        }
+        if (face_triangle[3] >= 0) {
+            add_wall({{{lo.x, hi.y, hi.z}, {lo.x, hi.y, lo.z}, {hi.x, hi.y, lo.z}, {hi.x, hi.y, hi.z}}},
+                     material_of(3));
+        }
+        if (face_triangle[2] >= 0) {
+            add_wall({{{hi.x, lo.y, hi.z}, {hi.x, lo.y, lo.z}, {lo.x, lo.y, lo.z}, {lo.x, lo.y, hi.z}}},
+                     material_of(2));
+        }
+        if (face_triangle[0] >= 0) {
+            add_wall({{{lo.x, lo.y, hi.z}, {lo.x, lo.y, lo.z}, {lo.x, hi.y, lo.z}, {lo.x, hi.y, hi.z}}},
+                     material_of(0));
+        }
+        if (face_triangle[4] >= 0) {
+            add_wall({{{hi.x, hi.y, lo.z}, {lo.x, hi.y, lo.z}, {lo.x, lo.y, lo.z}, {hi.x, lo.y, lo.z}}},
+                     material_of(4));
+        }
+        if (face_triangle[5] >= 0) {
+            add_wall({{{hi.x, lo.y, hi.z}, {lo.x, lo.y, hi.z}, {lo.x, hi.y, hi.z}, {hi.x, hi.y, hi.z}}},
+                     material_of(5));
+        }
+    } else {
+        const Vec3 center{(scene.bounds.minimum.x + scene.bounds.maximum.x) * 0.5,
+                          (scene.bounds.minimum.y + scene.bounds.maximum.y) * 0.5,
+                          (scene.bounds.minimum.z + scene.bounds.maximum.z) * 0.5};
+        for (const auto& triangle : scene.geometry) {
+            auto vertices = triangle.vertices;
+            const auto normal = cross(subtract(vertices[1], vertices[0]),
+                                      subtract(vertices[2], vertices[0]));
+            const auto centroid = multiply(add(add(vertices[0], vertices[1]), vertices[2]), 1.0 / 3.0);
+            if (dot(normal, subtract(center, centroid)) < 0.0) std::swap(vertices[1], vertices[2]);
+            add_wall({{vertices[0], vertices[1], vertices[2],
+                       multiply(add(vertices[2], vertices[0]), 0.5)}},
+                     triangle.material_id);
+        }
+    }
+
     auto room = std::make_shared<BRTServices::CRoom>();
     room->SetupRoomGeometry(geometry);
-    for (std::size_t wall = 0; wall < scene.geometry.size(); ++wall) {
+    for (std::size_t wall = 0; wall < wall_materials.size(); ++wall) {
         room->SetWallAbsortion(static_cast<int>(wall),
-            brt_absorption(scene, scene.geometry[wall].material_id, fallback_absorption));
+            brt_absorption(scene, wall_materials[wall], fallback_absorption));
     }
     return room;
 }
