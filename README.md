@@ -2,7 +2,7 @@
 
 A modular virtual acoustics synthesis engine for geometrical and wave-based propagation methods.
 
-The core is C++20 and can later be wrapped for Python, JUCE, game engines, or other hosts. Solver-neutral scene, source, receiver, and result types keep that choice from leaking into the scientific backends.
+The core is C++20 and can later be wrapped for Python, JUCE, game engines, or other hosts. Solver-neutral scene, source, receiver, and result types keep that choice from leaking into backends.
 
 ## Included
 
