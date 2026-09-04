@@ -46,6 +46,29 @@ python tools/prepare_pffdtd_job.py \
 
 Add `--fcc` for PFFDTD's FCC preparation and `--differentiate-source` for its single-precision safeguard. Prepare one cached job per source; voxelized scene data can be reused by future orchestration work, although PFFDTD's current setup script packages one source per job.
 
+Native PFFDTD `model_export.json` files (for example `data/models/CTK_Church`) have surface names in `mats_hash` but no `va_materials` coefficients. Point the same tool at PFFDTD's fitted HDF5 materials instead of a VA scene dump:
+
+```sh
+python tools/prepare_pffdtd_job.py \
+  --repository submodules/pffdtd \
+  --model submodules/pffdtd/data/models/CTK_Church/model_export.json \
+  --output jobs/ctk-church \
+  --maximum-frequency 1400 \
+  --points-per-wavelength 10.5 \
+  --duration 3.0 \
+  --source 1 \
+  --differentiate-source \
+  --materials-dir submodules/pffdtd/data/materials \
+  --material AcousticPanel=ctk_acoustic_panel.h5 \
+  --material Altar=ctk_altar.h5 \
+  --material Carpet=ctk_carpet.h5 \
+  --material Ceiling=ctk_ceiling.h5 \
+  --material Glass=ctk_window.h5 \
+  --material PlushChair=ctk_chair.h5 \
+  --material Tile=ctk_tile.h5 \
+  --material Walls=ctk_walls.h5
+```
+
 ## Execute and import
 
 Choose `prepared_output` when `sim_outs.h5` already exists, `python_cpu` to run PFFDTD's Numba engine, or a native CPU mode after building the corresponding binary in `submodules/pffdtd/c_cuda`.
