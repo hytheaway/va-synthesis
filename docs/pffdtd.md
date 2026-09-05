@@ -46,7 +46,7 @@ python tools/prepare_pffdtd_job.py \
 
 Add `--fcc` for PFFDTD's FCC preparation and `--differentiate-source` for its single-precision safeguard. Prepare one cached job per source; voxelized scene data can be reused by future orchestration work, although PFFDTD's current setup script packages one source per job.
 
-Native PFFDTD `model_export.json` files (for example `data/models/CTK_Church`) have surface names in `mats_hash` but no `va_materials` coefficients. Point the same tool at PFFDTD's fitted HDF5 materials instead of a VA scene dump:
+Native PFFDTD `model_export.json` files (for example `data/models/CTK_Church`) have surface names in `mats_hash` but no `va_materials` coefficients, but the same tool can be used as long as you point it as PFFDTD's fitted HDF5 materials instead of a `va-synthesis` scene dump:
 
 ```sh
 python tools/prepare_pffdtd_job.py \
