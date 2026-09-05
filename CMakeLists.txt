@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(va_synthesis VERSION 0.1.0 LANGUAGES CXX)
+project(va_synthesis VERSION 0.1.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -9,12 +9,14 @@ option(VA_BUILD_APPS "Build command-line applications" ON)
 option(VA_BUILD_TESTS "Build tests" ON)
 option(VA_ENABLE_BRT "Expose the vendored BRTLibrary headers to the geometrical backend" ON)
 option(VA_ENABLE_PFFDTD "Enable the external PFFDTD backend adapter" ON)
+option(VA_ENABLE_MYSOFA "Enable HRTF SOFA binaural rendering via libmysofa" ON)
 option(VA_ENABLE_PFFDTD_E2E_TESTS
     "Run the opt-in headless PFFDTD Python integration test" OFF)
 set(VA_PFFDTD_PYTHON_EXECUTABLE "" CACHE FILEPATH
     "Python interpreter in the PFFDTD environment")
 
 add_library(va_synthesis
+    src/binaural/hrtf_renderer.cpp
     src/core/audio.cpp
     src/core/engine.cpp
     src/geometrical/brt_geometrical_solver.cpp
@@ -88,6 +90,44 @@ if(VA_ENABLE_BRT)
     target_compile_definitions(va_synthesis PUBLIC VA_HAS_BRT=1)
 else()
     target_compile_definitions(va_synthesis PUBLIC VA_HAS_BRT=0)
+endif()
+
+set(VA_MYSOFA_TARGET "")
+if(VA_ENABLE_MYSOFA)
+    find_package(ZLIB QUIET)
+    find_package(mysofa CONFIG QUIET)
+    if(TARGET mysofa::mysofa-static)
+        set(VA_MYSOFA_TARGET mysofa::mysofa-static)
+    elseif(TARGET mysofa::mysofa-shared)
+        set(VA_MYSOFA_TARGET mysofa::mysofa-shared)
+    endif()
+    if(VA_MYSOFA_TARGET STREQUAL "" AND ZLIB_FOUND)
+        include(FetchContent)
+        set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+        set(BUILD_TESTS OFF CACHE BOOL "Disable libmysofa tests" FORCE)
+        set(BUILD_STATIC_LIBS ON CACHE BOOL "Build libmysofa static library" FORCE)
+        FetchContent_Declare(libmysofa
+            GIT_REPOSITORY https://github.com/hoene/libmysofa.git
+            GIT_TAG v1.3.2
+            GIT_SHALLOW TRUE
+        )
+        FetchContent_MakeAvailable(libmysofa)
+        if(TARGET mysofa::mysofa-static)
+            set(VA_MYSOFA_TARGET mysofa::mysofa-static)
+        elseif(TARGET mysofa-static)
+            set(VA_MYSOFA_TARGET mysofa-static)
+        endif()
+    endif()
+endif()
+if(VA_MYSOFA_TARGET)
+    target_link_libraries(va_synthesis PUBLIC $<BUILD_INTERFACE:${VA_MYSOFA_TARGET}>)
+    target_compile_definitions(va_synthesis PUBLIC VA_HAS_MYSOFA=1)
+else()
+    target_compile_definitions(va_synthesis PUBLIC VA_HAS_MYSOFA=0)
+    if(VA_ENABLE_MYSOFA)
+        message(WARNING
+            "libmysofa was not found; HRTF SOFA binaural rendering will be unavailable")
+    endif()
 endif()
 
 install(TARGETS va_synthesis
