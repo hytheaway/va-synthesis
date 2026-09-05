@@ -21,7 +21,7 @@ conda env create -f submodules/pffdtd/python/conda_pffdtd.yml
 conda activate pffdtd
 ```
 
-The fork that `va-synthesis` uses is my fork of Brian Hamilton's original PFFDTD, which I slightly optimized for Arch with CPU rendering. There are major pickling issues on macOS and Windows associated with the visualization of PFFDTD. Linux doesn't have as much of a problem, but the visualization process is not part of `va-synthesis`. Still, I'm keeping the external adapter optional so core `va-synthesis` remain portable IF there are some issues with macOS or Windows.
+The fork that `va-synthesis` uses is my fork of Brian Hamilton's original PFFDTD, which I slightly optimized for Arch with CPU rendering. PFFDTD's voxelizer (and its optional Mayavi visualization) uses nested multiprocessing workers that cannot be pickled. That is fine under Linux `fork`, but macOS and Windows default to `spawn` and fail with `Can't pickle local object '...process_voxels'`. `prepare_pffdtd_job.py` therefore forces `--processes 1` on those platforms. Visualization is not part of `va-synthesis`. The adapter stays optional so core `va-synthesis` remains portable.
 
 ## Prepare a job
 
@@ -44,7 +44,7 @@ python tools/prepare_pffdtd_job.py \
   --source 1
 ```
 
-Add `--fcc` for PFFDTD's FCC preparation and `--differentiate-source` for its single-precision safeguard. Prepare one cached job per source; voxelized scene data can be reused by future orchestration work, although PFFDTD's current setup script packages one source per job.
+On macOS and Windows, add `--processes 1` (the tool does this automatically if you omit it). Add `--fcc` for PFFDTD's FCC preparation and `--differentiate-source` for its single-precision safeguard. Prepare one cached job per source; voxelized scene data can be reused by future orchestration work, although PFFDTD's current setup script packages one source per job.
 
 Native PFFDTD `model_export.json` files (for example `data/models/CTK_Church`) have surface names in `mats_hash` but no `va_materials` coefficients, but the same tool can be used as long as you point it as PFFDTD's fitted HDF5 materials instead of a `va-synthesis` scene dump:
 
@@ -57,6 +57,7 @@ python tools/prepare_pffdtd_job.py \
   --points-per-wavelength 10.5 \
   --duration 3.0 \
   --source 1 \
+  --processes 1 \
   --differentiate-source \
   --materials-dir submodules/pffdtd/data/materials \
   --material AcousticPanel=ctk_acoustic_panel.h5 \

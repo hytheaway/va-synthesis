@@ -8,6 +8,7 @@ pass the matching HDF5 impedance files with --materials-dir and --material.
 
 import argparse
 import json
+import multiprocessing as mp
 import sys
 from pathlib import Path
 
@@ -18,6 +19,32 @@ def parse_material_assignment(text: str) -> tuple[str, str]:
         raise argparse.ArgumentTypeError(
             f"--material must be NAME=FILE, got {text!r}")
     return name, filename
+
+
+def pffdtd_process_count(requested: int | None) -> int | None:
+    """Return a worker count that PFFDTD's voxelizers can actually launch.
+
+    Both VoxGridBase.fill and VoxScene.calc_adj pass nested functions to
+    multiprocessing.Process. Linux fork inherits those closures; spawn
+    (macOS and Windows) has to pickle them and raises
+    AttributeError: Can't pickle local object '...process_voxels'.
+    """
+    method = mp.get_start_method()
+    if method == "fork":
+        return requested
+    if requested == 1:
+        return 1
+    reason = (
+        f"multiprocessing start method is {method!r} on {sys.platform}; "
+        "PFFDTD nested voxelizer workers cannot be pickled"
+    )
+    if requested is None:
+        print(f"--PREPARE_PFFDTD: {reason}. Using --processes 1.",
+              file=sys.stderr)
+    else:
+        print(f"--PREPARE_PFFDTD: ignoring --processes {requested}; {reason}. "
+              "Using 1 process.", file=sys.stderr)
+    return 1
 
 
 def main() -> None:
@@ -32,7 +59,7 @@ Native PFFDTD example (CTK Church ships impedance HDF5 files):
     --model submodules/pffdtd/data/models/CTK_Church/model_export.json \\
     --output jobs/ctk-church \\
     --maximum-frequency 1400 --points-per-wavelength 10.5 --duration 3.0 \\
-    --source 1 --differentiate-source \\
+    --source 1 --processes 1 --differentiate-source \\
     --materials-dir submodules/pffdtd/data/materials \\
     --material AcousticPanel=ctk_acoustic_panel.h5 \\
     --material Altar=ctk_altar.h5 \\
@@ -50,7 +77,11 @@ Native PFFDTD example (CTK Church ships impedance HDF5 files):
     parser.add_argument("--points-per-wavelength", type=float, default=8.0)
     parser.add_argument("--duration", type=float, required=True)
     parser.add_argument("--source", type=int, default=1)
-    parser.add_argument("--processes", type=int)
+    parser.add_argument(
+        "--processes", type=int,
+        help="Voxelizer worker count. Defaults to ~80%% of cores on Linux. "
+             "macOS and Windows must use 1 because spawn cannot pickle "
+             "PFFDTD's nested voxelizer workers.")
     parser.add_argument("--fcc", action="store_true")
     parser.add_argument("--differentiate-source", action="store_true")
     parser.add_argument("--materials-dir", type=Path,
@@ -62,6 +93,7 @@ Native PFFDTD example (CTK Church ships impedance HDF5 files):
     args = parser.parse_args()
     if args.processes is not None and args.processes < 1:
         parser.error("--processes must be at least 1")
+    nprocs = pffdtd_process_count(args.processes)
 
     with args.model.open(encoding="utf-8") as handle:
         model = json.load(handle)
@@ -133,7 +165,7 @@ Native PFFDTD example (CTK Church ships impedance HDF5 files):
         save_folder=args.output,
         compress=0,
         draw_vox=False,
-        Nprocs=args.processes,
+        Nprocs=nprocs,
     )
 
 
