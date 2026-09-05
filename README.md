@@ -9,11 +9,11 @@ The core is C++20 and can later be wrapped for Python, JUCE, game engines, or ot
 - A common `PropagationSolver` API and runtime-selectable `Engine`.
 - Per-source/per-receiver impulse responses, FFT convolution, band-limited resampling, and complementary wave/geometrical crossover support.
 - A geometrical backend with free-field propagation, BRTLibrary image sources, BRTLibrary scattering delay networks, and stochastic specular ray tracing. It models triangle room geometry, material absorption, reflections, and reverberant paths.
-- A compact 7-point Cartesian reference FDTD solver with bandwidth-derived grid spacing, PFFDTD-compatible source scaling, trilinear interpolation, and a conservative Courant margin.
+- A minimal 7-point Cartesian FDTD solver with bandwidth-derived grid spacing, PFFDTD-compatible source scaling, trilinear interpolation, and a conservative Courant margin.
 - `hytheaway/pffdtd`-provided scene export, job preparation, HDF5 result extraction, PFFDTD post-processing, and external Python/native-CPU execution adapters.
 - A command-line example and dependency-free smoke tests.
 
-_The FDTD solver is not a production room simulator: it uses a uniform 3D Cartesian grid and does not yet model interior obstacles or frequency-dependent impedance._
+_The minimal FDTD is not a production room simulator: it's based on a uniform 3D Cartesian grid and does not model interior obstacles or frequency-dependent impedance._
 
 ## Build and run
 
