@@ -32,6 +32,9 @@ struct Source {
 
 struct Receiver {
     Vec3 position;
+    double yaw_degrees{};
+    double pitch_degrees{};
+    double roll_degrees{};
 };
 
 struct Bounds {
