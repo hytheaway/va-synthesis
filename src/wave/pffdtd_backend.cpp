@@ -83,7 +83,8 @@ void PFFDTDBackend::validate(
     for (const auto* filename : {"comms_out.h5", "sim_consts.h5"}) {
         if (!std::filesystem::exists(settings_.data_directory / filename)) {
             throw std::invalid_argument(
-                "PFFDTD data directory is missing required prepared HDF5 files");
+                "PFFDTD data directory is missing required prepared HDF5 files: " +
+                (settings_.data_directory / filename).string());
         }
     }
     if (settings_.execution == PFFDTDExecution::prepared_output &&
