@@ -94,7 +94,7 @@ A short inventory is also in [THIRD_PARTY.md](THIRD_PARTY.md).
 
 [BRTLibrary](https://github.com/GrupoDiana/BRTLibrary) (Binaural Rendering Toolbox) is used for image-source and scattering-delay-network geometrical acoustics. It is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or any later version.
 
-Copyright for each module belongs to its respective authors. The library is developed by a team coordinated by Arcadio Reyes-Lecuona (Diana Research Group, University of Málaga) and Lorenzo Picinali (Audio Experience Design Team, Imperial College London). Current authors include María Cuevas-Rodríguez, Daniel González-Toledo, and Luis Molina-Tanco. The SDN environment model includes contributions from Marco Fontana (Laboratorio di Informatica Musicale, Università degli Studi di Milano).
+Copyright for each module belongs to its respective authors. The library is developed by a team coordinated by [Arcadio Reyes-Lecuona](https://github.com/areyesl) ([Diana Research Group, University of Málaga](https://www.diana.uma.es/3di-diana/)) and [Lorenzo Picinali](https://github.com/lpicinali) ([Audio Experience Design Team, Imperial College London](https://www.axdesign.co.uk/)). Current authors include [María Cuevas-Rodríguez](https://github.com/mariacuevas), [Daniel González-Toledo](https://github.com/dgonzalezt), and [Luis Molina-Tanco](https://github.com/lmtanco). The SDN environment model includes contributions from [Marco Fontana](https://github.com/MarcoFontana) ([Laboratorio di Informatica Musicale, Università degli Studi di Milano](https://www.lim.di.unimi.it/)).
 
 BRTLibrary includes code from the [3D Tune-In Toolkit](https://github.com/3DTune-In/3dti_AudioToolkit), also under GPLv3, copyright University of Málaga and Imperial College London.
 
@@ -102,7 +102,7 @@ Vendored at [`submodules/BRTLibrary`](submodules/BRTLibrary) (fork: [hytheaway/B
 
 ### PFFDTD (MIT)
 
-[PFFDTD](https://github.com/bsxfun/pffdtd) (pretty fast FDTD) by Brian Hamilton is used for wave-based room simulation setup, execution, and post-processing. It is licensed under the MIT License:
+[PFFDTD](https://github.com/bsxfun/pffdtd) (pretty fast FDTD) by [Brian Hamilton](https://github.com/bsxfun) is used for wave-based room simulation setup, execution, and post-processing. It is licensed under the MIT License:
 
 ```
 Copyright (c) 2021 bsxfun
