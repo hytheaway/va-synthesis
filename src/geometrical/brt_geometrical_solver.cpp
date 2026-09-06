@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #if VA_HAS_BRT
+#include <memory>
 #include <Common/Buffer.hpp>
 #include <Common/FFTCalculator.hpp>
 #include <Common/GlobalParameters.hpp>
