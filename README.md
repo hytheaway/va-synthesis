@@ -53,7 +53,7 @@ PYTHONPATH="$PWD/submodules/pffdtd/python" \
 python -c "from sim_setup import sim_setup; from fdtd.sim_fdtd import SimEngine; from fdtd.process_outputs import ProcessOutputs; print('PFFDTD imports passed')"
 ```
 
-After this has succeeded, you build properly:
+After this has succeeded, you build properly. Prefer GCC 10+, Clang 11+, or MSVC 2019 16.8+. On HPC, load a newer compiler before configuring if the login-node default is older (`module load gcc`, or `gcc/11` / `gcc/12`):
 
 ```sh
 cmake -S . -B build

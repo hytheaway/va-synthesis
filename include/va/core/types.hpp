@@ -12,6 +12,8 @@ namespace va {
 using Sample = float;
 using AudioBuffer = std::vector<Sample>;
 
+inline constexpr double kPi = 3.14159265358979323846;
+
 struct Vec3 {
     double x{};
     double y{};

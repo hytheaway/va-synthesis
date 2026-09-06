@@ -29,6 +29,10 @@ add_library(va::synthesis ALIAS va_synthesis)
 set_target_properties(va_synthesis PROPERTIES EXPORT_NAME synthesis)
 
 target_compile_features(va_synthesis PUBLIC cxx_std_20)
+# GCC 8 advertises C++20 but keeps std::filesystem in a separate library.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
+    target_link_libraries(va_synthesis PUBLIC stdc++fs)
+endif()
 target_include_directories(va_synthesis
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

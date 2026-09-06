@@ -4,7 +4,6 @@
 #include <array>
 #include <cmath>
 #include <limits>
-#include <numbers>
 #include <numeric>
 #include <random>
 #include <stdexcept>
@@ -398,9 +397,9 @@ void compute_ray_tracing(const Scene& scene, const Source& source,
     add_direct_path(scene, source, receiver, configuration, settings, output);
     if (!configuration.enable_reverberation || configuration.reflection_order == 0) return;
     std::mt19937_64 generator(configuration.random_seed);
-    std::uniform_real_distribution<double> rotation(0.0, 2.0 * std::numbers::pi);
+    std::uniform_real_distribution<double> rotation(0.0, 2.0 * kPi);
     const auto phase = rotation(generator);
-    const double golden_angle = std::numbers::pi * (3.0 - std::sqrt(5.0));
+    const double golden_angle = kPi * (3.0 - std::sqrt(5.0));
     for (std::size_t ray = 0; ray < configuration.ray_count; ++ray) {
         const auto z = 1.0 - 2.0 * (static_cast<double>(ray) + 0.5) / configuration.ray_count;
         const auto radial = std::sqrt(std::max(0.0, 1.0 - z * z));

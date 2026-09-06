@@ -4,7 +4,6 @@
 #include <cmath>
 #include <complex>
 #include <limits>
-#include <numbers>
 #include <stdexcept>
 #include <vector>
 
@@ -33,7 +32,7 @@ void fft(std::vector<Complex>& values, bool inverse) {
         if (index < reversed) std::swap(values[index], values[reversed]);
     }
     for (std::size_t length = 2; length <= count; length <<= 1U) {
-        const auto angle = (inverse ? 2.0 : -2.0) * std::numbers::pi /
+        const auto angle = (inverse ? 2.0 : -2.0) * kPi /
                            static_cast<double>(length);
         const Complex root(std::cos(angle), std::sin(angle));
         for (std::size_t offset = 0; offset < count; offset += length) {
@@ -54,7 +53,7 @@ void fft(std::vector<Complex>& values, bool inverse) {
 
 double sinc(double value) {
     if (std::abs(value) < 1.0e-12) return 1.0;
-    const auto argument = std::numbers::pi * value;
+    const auto argument = kPi * value;
     return std::sin(argument) / argument;
 }
 
@@ -115,8 +114,8 @@ AudioBuffer resample(const AudioBuffer& input, double input_rate, double output_
             const auto input_index = center + tap;
             if (input_index < 0 || input_index >= static_cast<long long>(input.size())) continue;
             const auto distance = position - static_cast<double>(input_index);
-            const auto window = 0.42 + 0.5 * std::cos(std::numbers::pi * distance / radius) +
-                                0.08 * std::cos(2.0 * std::numbers::pi * distance / radius);
+            const auto window = 0.42 + 0.5 * std::cos(kPi * distance / radius) +
+                                0.08 * std::cos(2.0 * kPi * distance / radius);
             const auto weight = cutoff * sinc(cutoff * distance) * window;
             weighted_sum += static_cast<double>(input[static_cast<std::size_t>(input_index)]) * weight;
             weight_sum += weight;
@@ -203,7 +202,7 @@ AudioBuffer low_pass(const AudioBuffer& input, double sample_rate, double cutoff
     AudioBuffer output(input.size());
     if (input.empty()) return output;
     const auto alpha = static_cast<Sample>(
-        1.0 - std::exp(-2.0 * std::numbers::pi * cutoff_hz / sample_rate));
+        1.0 - std::exp(-2.0 * kPi * cutoff_hz / sample_rate));
     output[0] = alpha * input[0];
     for (std::size_t index = 1; index < input.size(); ++index) {
         output[index] = output[index - 1] + alpha * (input[index] - output[index - 1]);

@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <numbers>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -26,7 +25,7 @@ Vec3 source_in_listener_frame(const Vec3& source, const Receiver& listener) {
     listener_transform.SetPosition(Common::CVector3(
         static_cast<float>(listener.position.x), static_cast<float>(listener.position.y),
         static_cast<float>(listener.position.z)));
-    const auto deg2rad = static_cast<float>(std::numbers::pi / 180.0);
+    const auto deg2rad = static_cast<float>(kPi / 180.0);
     listener_transform.SetOrientation(Common::CQuaternion::FromYawPitchRoll(
         static_cast<float>(listener.yaw_degrees) * deg2rad,
         static_cast<float>(listener.pitch_degrees) * deg2rad,
@@ -37,7 +36,7 @@ Vec3 source_in_listener_frame(const Vec3& source, const Receiver& listener) {
     const auto local = listener_transform.GetVectorTo(source_transform);
     return {local.x, local.y, local.z};
 #else
-    const auto deg2rad = std::numbers::pi / 180.0;
+    const auto deg2rad = kPi / 180.0;
     const auto yaw = listener.yaw_degrees * deg2rad;
     const auto pitch = listener.pitch_degrees * deg2rad;
     const auto roll = listener.roll_degrees * deg2rad;
