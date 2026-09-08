@@ -6,8 +6,6 @@ to locals. Optimized builds then feed garbage normals into image-source
 generation, so every reflection fails the visibility self-check.
 """
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 
