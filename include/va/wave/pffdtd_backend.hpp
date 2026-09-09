@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <cstddef>
 
 namespace va::wave {
 
@@ -23,6 +24,8 @@ struct PFFDTDSettings {
     PFFDTDExecution execution{PFFDTDExecution::prepared_output};
     double valid_bandwidth{1'000.0};
     bool apply_air_absorption{false};
+    // 0 means detect from cpu affinity (useful for SLURM workflows)
+    std::size_t python_threads{0};
 };
 
 // Adapter for a PFFDTD job prepared by its Python voxelization pipeline.

@@ -10,7 +10,12 @@
 #include <fstream>
 #include <stdexcept>
 #include <system_error>
+#include <thread>
 #include <utility>
+
+#ifdef __linux__
+#include <sched.h>
+#endif
 
 namespace va::wave {
 namespace {
@@ -31,6 +36,37 @@ void run_command(const std::string& command, const char* description) {
     if (std::system(command.c_str()) != 0) {
         throw std::runtime_error(std::string(description) + " failed");
     }
+}
+
+int env_positive_int(const char* name) {
+  if (const char* value = std::getenv(name); value && *value) {
+    char* end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    if (end != value && parsed > 0 && parse <= 65536) {
+      return static_cast<int>(parsed);
+    }
+  }
+  return 0;
+}
+
+int affinity_cpu_count() {
+#ifdef __linux__
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  if (sched_getaffinity(0, sizeof(set), &set) == 0) {
+    const int count = CPU_COUNT(&set);
+    if (count > 0) return count;
+  }
+#endif
+  const unsigned hardware = std::thread::hardware_concurrency();
+  return hardware ? static_cast<int>(hardware) : 1;
+}
+
+int pffdtd_thread_count(std::size_t requested) {
+  if (requested > 0) return static_cast<int>(requested);
+  if (const int n = env_positive_int("VA_PFFDTD_THREADS"); n > 0) return n;
+  if (const int n = env_positive_int("SLURM_CPUS_PER_TASK"); n > 0) return n;
+  return affinity_cpu_count();
 }
 
 template <class Value>
@@ -99,10 +135,13 @@ ImpulseResponseSet PFFDTDBackend::compute_impulse_responses(
     const auto repository = std::filesystem::absolute(settings_.repository);
     const auto data_directory = std::filesystem::absolute(settings_.data_directory);
 
+    const auto threads = std::to_string(pffdtd_thread_count(settings_.python_threads));
+    const auto thread_env = "NUMBA_NUM_THREADS=" + threads + "OMP_NUM_THREADS=" + threads + " ";
+
     if (settings_.execution == PFFDTDExecution::python_cpu) {
-        const auto command = "cd " + shell_quote(repository / "python") + " && " +
+        const auto command = "cd " + shell_quote(repository / "python") + " && " + thread_env +
             shell_quote(settings_.python_executable) + " -m fdtd.sim_fdtd --data_dir " +
-            shell_quote(data_directory);
+            shell_quote(data_directory) + "--nthreads " + threads;
         run_command(command, "PFFDTD Python simulation");
     } else if (settings_.execution == PFFDTDExecution::native_cpu_double ||
                settings_.execution == PFFDTDExecution::native_cpu_single) {
@@ -110,7 +149,7 @@ ImpulseResponseSet PFFDTDBackend::compute_impulse_responses(
             (settings_.execution == PFFDTDExecution::native_cpu_double
                  ? "fdtd_main_cpu_double.x"
                  : "fdtd_main_cpu_single.x");
-        const auto command = "cd " + shell_quote(data_directory) + " && " +
+        const auto command = "cd " + shell_quote(data_directory) + " && " + thread_env +
                              shell_quote(executable);
         run_command(command, "PFFDTD native CPU simulation");
     }
